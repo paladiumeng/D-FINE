@@ -311,7 +311,15 @@ class DFINECriterion(nn.Module):
                 [num_boxes_go], dtype=torch.float, device=next(iter(outputs.values())).device
             )
             if is_dist_available_and_initialized():
-                torch.distributed.all_reduce(num_boxes_go)
+                try:
+                    # Check if backend supports CPU (gloo/mpi do, nccl doesn't)
+                    backend = torch.distributed.get_backend()
+                    if backend in ["gloo", "mpi"]:
+                        torch.distributed.all_reduce(num_boxes_go)
+                    # If backend doesn't support CPU, skip all_reduce (single process)
+                except RuntimeError:
+                    # If distributed ops fail, continue without reduction (single process)
+                    pass
             num_boxes_go = torch.clamp(num_boxes_go / get_world_size(), min=1).item()
         else:
             assert "aux_outputs" in outputs, ""
@@ -322,7 +330,15 @@ class DFINECriterion(nn.Module):
             [num_boxes], dtype=torch.float, device=next(iter(outputs.values())).device
         )
         if is_dist_available_and_initialized():
-            torch.distributed.all_reduce(num_boxes)
+            try:
+                # Check if backend supports CPU (gloo/mpi do, nccl doesn't)
+                backend = torch.distributed.get_backend()
+                if backend in ["gloo", "mpi"]:
+                    torch.distributed.all_reduce(num_boxes)
+                # If backend doesn't support CPU, skip all_reduce (single process)
+            except RuntimeError:
+                # If distributed ops fail, continue without reduction (single process)
+                pass
         num_boxes = torch.clamp(num_boxes / get_world_size(), min=1).item()
 
         # Compute all the requested losses

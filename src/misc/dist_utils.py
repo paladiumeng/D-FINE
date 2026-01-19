@@ -134,18 +134,56 @@ def warp_model(
     compile_mode: str = "reduce-overhead",
     **kwargs,
 ):
+    # Check if model is on CPU (macOS/MPS) or GPU BEFORE converting SyncBatchNorm
+    # SyncBatchNorm only works on GPU, so skip conversion for CPU models
+    try:
+        device = next(model.parameters()).device
+        is_cpu = device.type == "cpu"
+    except (StopIteration, RuntimeError):
+        # If model has no parameters or device can't be determined, assume CPU
+        is_cpu = True
+
     if is_dist_available_and_initialized():
         rank = get_rank()
-        model = nn.SyncBatchNorm.convert_sync_batchnorm(model) if sync_bn else model
+
+        # Only convert to SyncBatchNorm if not on CPU (SyncBatchNorm requires GPU)
+        if sync_bn and not is_cpu:
+            model = nn.SyncBatchNorm.convert_sync_batchnorm(model)
+
+        # Check if distributed backend supports CPU
+        try:
+            backend = torch.distributed.get_backend()
+            cpu_backend_supported = backend in [
+                "gloo",
+                "mpi",
+            ]  # gloo supports CPU, nccl doesn't
+        except RuntimeError:
+            # If backend can't be determined, assume it doesn't support CPU
+            cpu_backend_supported = False
+
         if dist_mode == "dp":
-            model = DP(model, device_ids=[rank], output_device=rank)
+            if is_cpu:
+                model = DP(model)
+            else:
+                model = DP(model, device_ids=[rank], output_device=rank)
         elif dist_mode == "ddp":
-            model = DDP(
-                model,
-                device_ids=[rank],
-                output_device=rank,
-                find_unused_parameters=find_unused_parameters,
-            )
+            if is_cpu and not cpu_backend_supported:
+                # Skip DDP wrapping for CPU models when backend doesn't support CPU (macOS)
+                # DDP doesn't work properly with CPU on macOS - model will run without DDP
+                pass
+            elif is_cpu:
+                # For CPU models with supported backend, don't specify device_ids
+                model = DDP(
+                    model,
+                    find_unused_parameters=find_unused_parameters,
+                )
+            else:
+                model = DDP(
+                    model,
+                    device_ids=[rank],
+                    output_device=rank,
+                    find_unused_parameters=find_unused_parameters,
+                )
         else:
             raise AttributeError("")
 
@@ -266,7 +304,8 @@ def check_compile():
             gpu_ok = True
     if not gpu_ok:
         warnings.warn(
-            "GPU is not NVIDIA V100, A100, or H100. Speedup numbers may be lower " "than expected."
+            "GPU is not NVIDIA V100, A100, or H100. Speedup numbers may be lower "
+            "than expected."
         )
     return gpu_ok
 

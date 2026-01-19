@@ -234,7 +234,7 @@ class PResNet(nn.Module):
                     donwload_url[depth], map_location="cpu", model_dir="weight"
                 )
             else:
-                state = torch.load(pretrained, map_location="cpu")
+                state = torch.load(pretrained, map_location="cpu", weights_only=False)
             self.load_state_dict(state)
             print(f"Load PResNet{depth} state_dict")
 

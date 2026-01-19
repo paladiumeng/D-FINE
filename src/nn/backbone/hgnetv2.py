@@ -531,7 +531,7 @@ class HGNetv2(nn.Module):
 
                 # All processes load the downloaded model
                 model_path = local_model_dir + "PPHGNetV2_" + name + "_stage1.pth"
-                state = torch.load(model_path, map_location="cpu")
+                state = torch.load(model_path, map_location="cpu", weights_only=False)
 
                 self.load_state_dict(state)
                 print(f"Loaded stage1 {name} HGNetV2 from URL.")
