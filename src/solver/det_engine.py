@@ -204,8 +204,29 @@ def evaluate(
         #     target_sizes = torch.stack([t["size"] for t in targets], dim=0)
         #     results = postprocessor['segm'](results, outputs, orig_target_sizes, target_sizes)
 
-        res = {target["image_id"].item(): output for target, output in zip(targets, results)}
         if coco_evaluator is not None:
+            res = {}
+            dataset = data_loader.dataset
+            # Handle Subset or other wrappers
+            while hasattr(dataset, 'dataset') and not hasattr(dataset, 'label2category'):
+                dataset = dataset.dataset
+
+            for target, result in zip(targets, results):
+                # Map labels back to original category IDs for COCO evaluator
+                if not postprocessor.remap_mscoco_category and hasattr(dataset, 'label2category'):
+                    mapped_labels = torch.tensor(
+                        [dataset.label2category[int(l)] for l in result["labels"]],
+                        device=result["labels"].device,
+                        dtype=result["labels"].dtype
+                    )
+                else:
+                    mapped_labels = result["labels"]
+                
+                res[target["image_id"].item()] = {
+                    "labels": mapped_labels,
+                    "boxes": result["boxes"],
+                    "scores": result["scores"]
+                }
             coco_evaluator.update(res)
 
         # validator format for metrics
