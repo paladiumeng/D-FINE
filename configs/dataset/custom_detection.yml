@@ -4,15 +4,15 @@ evaluator:
   type: CocoEvaluator
   iou_types: ['bbox', ]
 
-num_classes: 1 # plate dataset classes: plate
+num_classes: 1 # single vehicle class
 remap_mscoco_category: False
 
 train_dataloader:
   type: DataLoader
   dataset:
     type: CocoDetection
-    img_folder: /Users/testcase/Projects/D-FINE/data/plate_dataset/train/images
-    ann_file: /Users/testcase/Projects/D-FINE/data/plate_dataset/train/annotations/instances_train.json
+    img_folder: data/train/images
+    ann_file: data/train/annotations/instances_train.json
     return_masks: False
     transforms:
       type: Compose
@@ -28,8 +28,8 @@ val_dataloader:
   type: DataLoader
   dataset:
     type: CocoDetection
-    img_folder: /Users/testcase/Projects/D-FINE/data/plate_dataset/val/images
-    ann_file: /Users/testcase/Projects/D-FINE/data/plate_dataset/val/annotations/instances_val.json
+    img_folder: data/val/images
+    ann_file: data/val/annotations/instances_val.json
     return_masks: False
     transforms:
       type: Compose

@@ -1,0 +1,28 @@
+container_image_uri: null
+project_id: production-paladium
+location: us-central1
+display_name: dfine-vehicle-training
+machine_type: n1-highmem-16
+accelerator_type: NVIDIA_TESLA_V100  
+accelerator_count: 2
+replica_count: 1
+service_account: null  
+
+labels:
+  environment: production
+  cost_center: computer_vision
+  model: dfine
+  task: vehicle_detection
+
+gcs_data_path: gs://cv_datasets_dir/object_detection/vehicle_detection_v2/vehicle_coco
+
+wandb_api_key: null
+
+args:
+  - -c
+  - configs/dfine/custom/dfine_hgnetv2_n_custom.yml
+  - --use-amp
+  - --seed=727
+  - -t
+  - weights/dfine_n_coco.pth
+  - --output-dir=/gcs/cv_models_dir/vehicle_detection/outputs

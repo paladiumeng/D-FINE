@@ -16,6 +16,9 @@ dependencies = [
     "Pillow==12.1.0",
     "tqdm==4.67.1",
     "matplotlib==3.10.8",
+    "google-cloud-aiplatform>=1.134.0",
+    "pyparsing>=3.0.0",
+    "google-cloud-storage>=3.8.0",
 ]
 
 [project.optional-dependencies]

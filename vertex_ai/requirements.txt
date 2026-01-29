@@ -1,0 +1,4 @@
+# Requirements for running Vertex AI submission script
+google-cloud-aiplatform>=1.38.0
+pyyaml>=6.0
+google-auth>=2.0.0
